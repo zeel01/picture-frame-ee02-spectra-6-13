@@ -3,3 +3,8 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+/images
+/images_bin
+managed_components
+sdkconfig.*
+!sdkconfig.defaults

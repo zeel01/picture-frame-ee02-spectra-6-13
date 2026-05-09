@@ -1,0 +1,10 @@
+{
+	"idf.currentSetup": "C:\\esp\\v6.0\\esp-idf",
+	"terminal.integrated.defaultProfile.windows": "PowerShell",
+	"chat.tools.terminal.autoApprove": {
+		"C:\\Users\\zeel\\.platformio\\penv\\Scripts\\platformio.exe": true
+	},
+	"cSpell.words": [
+		"epaper"
+	]
+}

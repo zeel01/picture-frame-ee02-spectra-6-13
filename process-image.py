@@ -31,6 +31,7 @@ HARDWARE_MAP = {
 
 # Image to display - change this path to your desired image
 DEFAULT_IMAGE_PATH = "image.jpg"
+DEFAULT_OUTPUT_DIR = "output"
 
 # Image rotation configuration
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -112,7 +113,7 @@ def process_image_to_packed(image_path, contrast=DEFAULT_CONTRAST,
     )
 
     # Pack bits (2 pixels per byte)
-    pixels = list(dithered.getdata())
+    pixels = list(dithered.get_flattened_data())
     packed_data = bytearray()
 
     for i in range(0, len(pixels), 2):
@@ -127,23 +128,50 @@ def process_image_to_packed(image_path, contrast=DEFAULT_CONTRAST,
 
     return bytes(packed_data)
 
+def process_image(image_path, count=0, output_dir="."):
+    packed_data = process_image_to_packed(image_path)
+    output_path = os.path.join(output_dir, f"{count:03d}.bin")
+    with open(output_path, "wb") as f:
+        f.write(packed_data)
+
+    # with open("src/image.h", "w") as f:
+    #     f.write("#ifndef _IMAGE_H_\n#define _IMAGE_H_\n\n")
+    #     f.write(f"const unsigned char gImage_13inch3[] PROGMEM = {{\n")
+    #     for i in range(0, len(packed_data), 16):
+    #         line = ", ".join(f"0x{byte:02X}" for byte in packed_data[i:i+16])
+    #         f.write(f"    {line},\n")
+    #     f.write("};\n")
+    #     f.write("\n#endif // _IMAGE_H_\n")
+
+    print(f"Processed image saved as {count:03d}.bin ({len(packed_data)} bytes)")
+
 def main():
     # Get image path from command line argument or use default
     image_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_IMAGE_PATH
+    output_dir = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_OUTPUT_DIR
 
-    packed_data = process_image_to_packed(image_path)
-    with open("output.bin", "wb") as f:
-        f.write(packed_data)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-    with open("src/image.h", "w") as f:
-        f.write("#ifndef _IMAGE_H_\n#define _IMAGE_H_\n\n")
-        f.write(f"const unsigned char gImage_13inch3[] PROGMEM = {{\n")
-        for i in range(0, len(packed_data), 16):
-            line = ", ".join(f"0x{byte:02X}" for byte in packed_data[i:i+16])
-            f.write(f"    {line},\n")
-        f.write("};\n")
-        f.write("\n#endif // _IMAGE_H_\n")
-    print(f"Processed image saved as output.bin ({len(packed_data)} bytes)")
+    if os.path.isdir(image_path):
+        images = [f for f in os.listdir(image_path) if os.path.splitext(f)[1].lower() in SUPPORTED_EXTENSIONS]
+        if not images:
+            print(f"No supported image files found in directory: {image_path}")
+            return
+        
+        print(f"Processing {len(images)} images from directory: {image_path}")
+        count = 0
+        for img_file in images:
+            img_path = os.path.join(image_path, img_file)
+            print(f"Processing {img_path}...")
+            process_image(img_path, count, output_dir)
+            count += 1
+    else:
+        if not os.path.isfile(image_path):
+            print(f"Image file not found: {image_path}")
+            return
+        print(f"Processing image: {image_path}")
+        process_image(image_path, 0, output_dir)
 
 if __name__ == "__main__":
     main()

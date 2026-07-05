@@ -16,7 +16,7 @@ bool USB = false; // Set to true if USB is connected, false otherwise
 constexpr uint8_t BATTERY_ADC_PIN = A0; // GPIO1
 constexpr uint8_t BATTERY_ADC_ENABLE_PIN = 6; // D5 / GPIO6
 constexpr float BATTERY_VOLTAGE_DIVIDER_RATIO = 2.0f;
-constexpr float BATTERY_EMPTY_VOLTAGE = 3.3f;
+constexpr float BATTERY_EMPTY_VOLTAGE = 3.47f;
 constexpr float BATTERY_FULL_VOLTAGE = 4.2f;
 
 RTC_DATA_ATTR uint16_t imageIndex = 0;
@@ -114,6 +114,11 @@ void writeLogs() {
 		if (USB) Serial.println(batteryStr);
 		
 		logFile.printf("[%s] Displayed image: %03d.bin | %s\n", timeStr, imageIndex, batteryStr);
+
+		if (batteryVoltage < BATTERY_EMPTY_VOLTAGE) {
+			logFile.printf("[%s] Battery voltage critical: %.2f V, shutting down. Please recharge the battery.\n", timeStr, batteryVoltage);
+		}
+
 		logFile.flush();
 		logFile.close();
 	} else {
@@ -133,6 +138,19 @@ void setup() {
 	pinMode(BATTERY_ADC_PIN, INPUT);
 	pinMode(BATTERY_ADC_ENABLE_PIN, OUTPUT);
 	digitalWrite(BATTERY_ADC_ENABLE_PIN, LOW);
+
+	if (readBatteryVoltage() < BATTERY_EMPTY_VOLTAGE) {
+		if (USB) Serial.println("Battery voltage too low, skipping display update");
+		
+		if(SD.begin(21)){
+			writeLogs();
+			SD.end();
+		}
+		
+		prepareForDeepSleep();
+		esp_deep_sleep_start(); // Enter deep sleep immediately and don't schedule a wakeup timer
+		
+	}
 
 	if(!SD.begin(21)){
 		if (USB) Serial.println("Card Mount Failed");
